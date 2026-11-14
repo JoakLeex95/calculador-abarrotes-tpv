@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17365d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Precios TPV">
+  <title>Calculadora de Precios TPV</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    :root { color-scheme: light; --navy:#17365d; --blue:#eaf2f8; --ink:#17212b; --muted:#64748b; --green:#e5f4e5; --line:#dbe3ec; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f3f6fa; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+    header { background:var(--navy); color:white; padding:calc(18px + env(safe-area-inset-top)) 20px 22px; }
+    header h1 { margin:0; font-size:22px; letter-spacing:-.3px; }
+    header p { margin:7px 0 0; color:#d9e7f4; font-size:13px; line-height:1.4; }
+    main { max-width:620px; margin:0 auto; padding:16px 14px calc(30px + env(safe-area-inset-bottom)); }
+    .card { background:white; border:1px solid var(--line); border-radius:18px; padding:17px; margin-bottom:14px; box-shadow:0 3px 12px rgba(20,40,70,.045); }
+    h2 { margin:0 0 14px; color:var(--navy); font-size:16px; }
+    .field { margin:13px 0; }
+    label { display:block; font-size:13px; font-weight:650; margin-bottom:7px; }
+    .inputwrap { display:flex; align-items:center; background:#fff; border:1px solid #cbd5e1; border-radius:12px; overflow:hidden; }
+    .prefix,.suffix { padding:0 12px; color:var(--muted); font-weight:600; }
+    input { width:100%; min-width:0; border:0; outline:0; padding:13px 10px; font-size:17px; color:var(--ink); background:transparent; }
+    input:focus { box-shadow:inset 0 0 0 2px #8bb7df; border-radius:10px; }
+    .hint { color:var(--muted); font-size:11px; margin-top:5px; line-height:1.4; }
+    .result { background:var(--green); border:1px solid #cde7cd; border-radius:15px; padding:15px; }
+    .result .small { font-size:12px; color:#426343; font-weight:650; }
+    .price { font-size:34px; font-weight:800; color:#174d22; letter-spacing:-1px; margin:4px 0 2px; overflow-wrap:anywhere; }
+    .sub { color:#426343; font-size:12px; }
+    .rows { margin-top:13px; }
+    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+    .row:last-child { border-bottom:0; }
+    .row span:first-child { color:var(--muted); }
+    .row strong { text-align:right; font-variant-numeric:tabular-nums; }
+    .formula { background:var(--blue); border-radius:12px; padding:12px; color:#29445e; font-size:12px; line-height:1.55; overflow-wrap:anywhere; }
+    button { width:100%; border:0; border-radius:12px; padding:13px; background:var(--navy); color:white; font-size:15px; font-weight:700; margin-top:12px; }
+    button.secondary { background:#e8eef5; color:var(--navy); }
+    footer { text-align:center; color:var(--muted); font-size:11px; padding:4px 12px 12px; }
+    @media (min-width:560px) { main { padding-top:22px; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Calculadora de Precios TPV</h1>
+  <p>Calcula cuánto cobrar para cubrir tu costo, tu ganancia objetivo y la comisión de la terminal.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Datos de entrada</h2>
+    <div class="field">
+      <label for="cost">Costo del producto</label>
+      <div class="inputwrap"><span class="prefix">$</span><input id="cost" type="number" inputmode="decimal" min="0" step="0.01" value="100"></div>
+    </div>
+    <div class="field">
+      <label for="gain">Ganancia deseada sobre el costo (%)</label>
+      <div class="inputwrap"><input id="gain" type="number" inputmode="decimal" min="0" max="99.99" step="0.01" value="15"><span class="suffix">%</span></div>
+      <div class="hint">Ejemplo: escribe 15 para una ganancia objetivo del 15% sobre el costo, antes de descontar TPV.</div>
+    </div>
+    <div class="field">
+      <label for="fee">Comisión TPV (%)</label>
+      <div class="inputwrap"><input id="fee" type="number" inputmode="decimal" min="0" max="99.99" step="0.01" value="3.5"><span class="suffix">%</span></div>
+    </div>
+    <div class="field">
+      <label for="tax">IVA sobre la comisión TPV (%)</label>
+      <div class="inputwrap"><input id="tax" type="number" inputmode="decimal" min="0" max="99.99" step="0.01" value="16"><span class="suffix">%</span></div>
+      <div class="hint">Este IVA se aplica a la comisión de la terminal, no al costo del producto.</div>
+    </div>
+    <button class="secondary" id="reset">Restablecer valores de ejemplo</button>
+  </section>
+
+  <section class="card">
+    <h2>Resultado</h2>
+    <div class="result">
+      <div class="small">PRECIO MATEMÁTICO (SIN REDONDEAR)</div>
+      <div class="price" id="price">$122.610381</div>
+      <div class="sub">Se muestra sin redondear internamente; el formato presenta hasta 8 decimales.</div>
+    </div>
+    <div class="rows">
+      <div class="row"><span>Divisor de ganancia</span><strong id="gainFactor">0.8500</strong></div>
+      <div class="row"><span>Comisión TPV efectiva</span><strong id="effectiveFee">4.0600%</strong></div>
+      <div class="row"><span>Divisor TPV</span><strong id="feeFactor">0.9594</strong></div>
+      <div class="row"><span>Comisión TPV descontada</span><strong id="feeAmount">$4.9760</strong></div>
+      <div class="row"><span>Neto recibido después de TPV</span><strong id="net">$117.6344</strong></div>
+      <div class="row"><span>Ganancia neta después de TPV</span><strong id="netGain">$17.6344</strong></div>
+      <div class="row"><span>Ganancia neta sobre costo</span><strong id="netGainPct">17.63%</strong></div>
+      <div class="row"><span>Ganancia antes de TPV</span><strong id="grossGain">$22.6104</strong></div>
+      <div class="row"><span>Ganancia antes de TPV sobre costo</span><strong id="grossGainPct">22.61%</strong></div>
+    </div>
+    <button id="copy">Copiar precio</button>
+  </section>
+
+  <section class="card">
+    <h2>Fórmula utilizada</h2>
+    <div class="formula">
+      <strong>Precio = Costo ÷ (1 − ganancia) ÷ (1 − comisión TPV × (1 + IVA))</strong><br><br>
+      Ejemplo: 100 ÷ 0.85 ÷ 0.9594 = 122.610381...
+    </div>
+    <p class="hint">La ganancia objetivo se calcula sobre el costo antes de TPV. La ganancia neta muestra lo que queda después de descontar la comisión y su IVA.</p>
+  </section>
+  <footer>Calculadora local · Tus datos se procesan en este dispositivo.</footer>
+</main>
+<script>
+  const ids = ["cost","gain","fee","tax"];
+  const $ = id => document.getElementById(id);
+  const money = n => Number.isFinite(n) ? "$" + n.toFixed(8).replace(/0+$/,"").replace(/\\.$/,"") : "—";
+  const money4 = n => Number.isFinite(n) ? "$" + n.toFixed(4) : "—";
+  const pct = n => Number.isFinite(n) ? (n*100).toFixed(4)+"%" : "—";
+  function calculate() {
+    const cost = Number($("cost").value);
+    const gain = Number($("gain").value)/100;
+    const fee = Number($("fee").value)/100;
+    const tax = Number($("tax").value)/100;
+    const gainFactor = 1-gain;
+    const effectiveFee = fee*(1+tax);
+    const feeFactor = 1-effectiveFee;
+    const valid = [cost,gain,fee,tax].every(Number.isFinite) && cost>=0 && gain>=0 && gain<1 && fee>=0 && tax>=0 && gainFactor>0 && feeFactor>0;
+    if (!valid) {
+      $("price").textContent="Revisa los datos";
+      ["gainFactor","effectiveFee","feeFactor","feeAmount","net","netGain","netGainPct","grossGain","grossGainPct"].forEach(id=>$(id).textContent="—");
+      return;
+    }
+    const price = cost/gainFactor/feeFactor;
+    const feeAmount = price*effectiveFee;
+    const net = price-feeAmount;
+    const netGain = net-cost;
+    const grossGain = price-cost;
+    $("price").textContent=money(price);
+    $("gainFactor").textContent=gainFactor.toFixed(4);
+    $("effectiveFee").textContent=pct(effectiveFee);
+    $("feeFactor").textContent=feeFactor.toFixed(4);
+    $("feeAmount").textContent=money4(feeAmount);
+    $("net").textContent=money4(net);
+    $("netGain").textContent=money4(netGain);
+    $("netGainPct").textContent=cost ? (netGain/cost*100).toFixed(4)+"%" : "—";
+    $("grossGain").textContent=money4(grossGain);
+    $("grossGainPct").textContent=cost ? (grossGain/cost*100).toFixed(4)+"%" : "—";
+    $("copy").dataset.price=String(price);
+    try { localStorage.setItem("tpv_inputs", JSON.stringify({cost:$("cost").value,gain:$("gain").value,fee:$("fee").value,tax:$("tax").value})); } catch(e) {}
+  }
+  ids.forEach(id=>$(id).addEventListener("input",calculate));
+  $("reset").addEventListener("click",()=>{ $("cost").value=100; $("gain").value=15; $("fee").value=3.5; $("tax").value=16; calculate(); });
+  $("copy").addEventListener("click",async()=>{ const v=$("copy").dataset.price; try { await navigator.clipboard.writeText(v); $("copy").textContent="Precio copiado"; setTimeout(()=>$("copy").textContent="Copiar precio",1500); } catch(e) { $("copy").textContent="No se pudo copiar"; }});
+  try { const saved=JSON.parse(localStorage.getItem("tpv_inputs")||"null"); if(saved) ids.forEach(id=>{if(saved[id]!==undefined) $(id).value=saved[id];}); } catch(e) {}
+  calculate();
+  if ("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
